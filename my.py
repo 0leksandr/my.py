@@ -7,6 +7,7 @@ import csv
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import traceback
@@ -40,8 +41,11 @@ class Encoder(json.JSONEncoder):
             return list(o)
         if isinstance(o, Exception):
             return traceback.format_exc()
-        # if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
-        #     return o.__str__()
+        if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
+            _str = o.__str__()
+            # if not re.match(r"^<[^ ]+ object at 0x[0-f]{8,16}>$", _str):
+            if not re.match(f"^<__main__\\.{type(o).__name__} object at 0x[0-f]{{8,16}}>$", _str):
+                return _str
         if hasattr(o, '__dict__'):  # doesn't work for class with declared properties
             return merge_dicts({"class": type(o).__name__}, o.__dict__)
         # if isinstance(o, np.ndarray):
@@ -141,21 +145,17 @@ def chunks_list(lst: list, size: int) -> list:
 
 
 def csv_read_to_list(filename: str) -> list[list[str]]:
-    with open(filename) as file:
-        return [row for row in csv.reader(file)]
+    with open(filename, "r") as file:
+        delimiter = csv.Sniffer().sniff(file.readlines(1)[0]).delimiter
+        file.seek(0)
+        return [row for row in csv.reader(file, delimiter=delimiter)]
 
 
 def csv_read_to_dict(filename: str) -> list[dict[str, str]]:
-    rows = []
-    header = None
-    with open(filename) as file:
-        for row in csv.reader(file):
-            if header is None:
-                header = row
-            else:
-                assert len(header) == len(row)
-                rows.append({header[i]: row[i] for i in range(len(row))})
-    return rows
+    _list = csv_read_to_list(filename)
+    assert len(set(len(row) for row in _list)) == 1
+    header = _list.pop(0)
+    return [{header[i]: row[i] for i in range(len(row))} for row in _list]
 
 
 def csv_write(filename: str, table: list[list[str]]) -> None:
