@@ -43,8 +43,8 @@ class Encoder(json.JSONEncoder):
             return traceback.format_exc()
         if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
             _str = o.__str__()
-            # if not re.match(r"^<[^ ]+ object at 0x[0-f]{8,16}>$", _str):
-            if not re.match(f"^<__main__\\.{type(o).__name__} object at 0x[0-f]{{8,16}}>$", _str):
+            classname = re.match("^<class '([\\w.]+)'>$", str(type(o)))[1]
+            if not re.match(f"^<{classname} object at 0x[0-f]{{8,16}}>$", _str):
                 return _str
         if hasattr(o, '__dict__'):  # doesn't work for class with declared properties
             return merge_dicts({"class": type(o).__name__}, o.__dict__)
