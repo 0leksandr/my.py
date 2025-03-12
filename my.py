@@ -85,7 +85,8 @@ def json_decode(string: str):
 
 
 def dumped_at(skip: int, *var):
-    frame = traceback.extract_stack()[-1 - skip]
+    frames = traceback.extract_stack()[:-skip]
+    frame = frames[-1]
     filename = frame.filename
     dirname = os.path.dirname(filename)
     while not any([os.path.exists(f"{dirname}/{path}") for path in [".git", ".idea", ".venv"]]):
@@ -99,6 +100,7 @@ def dumped_at(skip: int, *var):
         if filename[:len(dirname)] == dirname:
             filename = filename[len(dirname):]
     prefix = f"{filename}:{frame.lineno}"
+    prefix += " " * len(frames)
     out = prefix
     for v in var:
         out += " " + json_encode(v)
@@ -125,7 +127,7 @@ def err(*var):  # duplicated from `dump`
     print(dumped_at(2, *var), file=sys.stderr)
 
 
-def call(command: str) -> list:
+def call(command: str) -> list[str]:
     lines = subprocess.Popen([command], stdout=subprocess.PIPE, shell=True).stdout.readlines()
     return [line.decode("utf-8").rstrip() for line in lines]
 
