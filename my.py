@@ -2,9 +2,10 @@ from __future__ import annotations
 from collections.abc import KeysView  # before 3.10: from collections import KeysView
 from datetime import datetime
 from itertools import islice
-from types import GeneratorType
+from types import GeneratorType, FunctionType
 import csv
 import io
+import inspect
 import json
 import os
 import re
@@ -42,10 +43,14 @@ class Encoder(json.JSONEncoder):
         if isinstance(o, Exception):
             return traceback.format_exc()
         if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
-            _str = o.__str__()
-            classname = re.match("^<class '([\\w.]+)'>$", str(type(o)))[1]
-            if not re.match(f"^<{classname} object at 0x[0-f]{{8,16}}>$", _str):
-                return _str
+            if (not isinstance(o.__str__, FunctionType)  # https://stackoverflow.com/a/8727121/12446338
+                and len(inspect.signature(o.__str__).parameters) == 1):
+                _str = o.__str__(o)
+            else:
+                _str = o.__str__()
+            if match := re.match("^<class '([\\w.]+)'>$", str(type(o))):
+                if not re.match(f"^<{match[1]} object at 0x[0-f]{{8,16}}>$", _str):
+                    return _str
         if hasattr(o, '__dict__'):  # doesn't work for class with declared properties
             return merge_dicts({"class": type(o).__name__}, o.__dict__)
         # if isinstance(o, np.ndarray):
