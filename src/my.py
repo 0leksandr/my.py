@@ -3,6 +3,7 @@ from collections.abc import KeysView  # before 3.10: from collections import Key
 from datetime import datetime
 from itertools import islice
 from types import GeneratorType, FunctionType
+from typing import Iterable
 import csv
 import io
 import inspect
@@ -24,9 +25,23 @@ def printed(var) -> str:
 
 class Encoder(json.JSONEncoder):
     def default(self, o):
+        return Encoder.default_encode(o)
+
+    @staticmethod
+    def default_encode(o):
+        return Encoder.__encode_dict(o)
+
+    @staticmethod
+    def __encode_dict(o):
         def merge_dicts(a: dict, b: dict) -> dict:
             return a | b if sys.version_info >= (3, 9) else {**a, **b}
 
+        f = Encoder.__encode_dict
+
+        if isinstance(o, list):
+            return [f(e) for e in o]
+        if isinstance(o, dict):
+            return {f(k): f(v) for k, v in o.items()}
         if isinstance(o, datetime):
             # return merge_dicts({'class': 'datetime'}, {prop: int(o.strftime(fmt)) for prop, fmt in {
             #     'year':   '%Y',
@@ -39,7 +54,7 @@ class Encoder(json.JSONEncoder):
             return o.strftime("%Y-%m-%d %H:%M:%S")
         if isinstance(o, (GeneratorType, KeysView)):
             # return [self.default(v) for v in o]
-            return list(o)
+            return f(list(o))
         if isinstance(o, Exception):
             return traceback.format_exc()
         if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
@@ -52,7 +67,7 @@ class Encoder(json.JSONEncoder):
                 if not re.match(f"^<{match[1]} object at 0x[0-f]{{8,16}}>$", _str):
                     return _str
         if hasattr(o, '__dict__'):  # doesn't work for class with declared properties
-            return merge_dicts({"class": type(o).__name__}, o.__dict__)
+            return f(merge_dicts({"class": type(o).__name__}, o.__dict__))
         # if isinstance(o, np.ndarray):
         #     return "\n" + printed(o)
         return printed(o)
@@ -69,7 +84,8 @@ class Encoder(json.JSONEncoder):
 
 
 def json_encode_obj(var):
-    return json.dumps(var, cls=Encoder, ensure_ascii=False)
+    # return json.dumps(var, cls=Encoder, ensure_ascii=False)
+    return json.dumps(Encoder.default_encode(var), ensure_ascii=False)
 
 
 def json_encode(var) -> str:
@@ -137,13 +153,13 @@ def call(command: str) -> list[str]:
     return [line.decode("utf-8").rstrip() for line in lines]
 
 
-def chunks_dict(data: dict, size: int) -> dict:
+def chunks_dict(data: dict, size: int) -> Iterable[dict]:
     it = iter(data)
     for i in range(0, len(data), size):
         yield {k: data[k] for k in islice(it, size)}
 
 
-def chunks_list(lst: list, size: int) -> list:
+def chunks_list(lst: list, size: int) -> Iterable[list]:
     for i in range(0, len(lst), size):
         yield lst[i:i + size]
 
