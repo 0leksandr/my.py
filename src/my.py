@@ -1,5 +1,5 @@
 from __future__ import annotations
-from collections.abc import KeysView  # before 3.10: from collections import KeysView
+from collections.abc import KeysView
 from datetime import datetime
 from itertools import islice
 from types import GeneratorType, FunctionType
@@ -42,6 +42,8 @@ class Encoder(json.JSONEncoder):
             return [f(e) for e in o]
         if isinstance(o, dict):
             return {f(k): f(v) for k, v in o.items()}
+        if isinstance(o, tuple):
+            return tuple(f(e) for e in o)
         if isinstance(o, datetime):
             # return merge_dicts({'class': 'datetime'}, {prop: int(o.strftime(fmt)) for prop, fmt in {
             #     'year':   '%Y',
@@ -53,14 +55,13 @@ class Encoder(json.JSONEncoder):
             # }.items()})
             return o.strftime("%Y-%m-%d %H:%M:%S")
         if isinstance(o, (GeneratorType, KeysView)):
-            # return [self.default(v) for v in o]
             return f(list(o))
         if isinstance(o, Exception):
             return traceback.format_exc()
         if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
             if (not isinstance(o.__str__, FunctionType)  # https://stackoverflow.com/a/8727121/12446338
                 and len(inspect.signature(o.__str__).parameters) == 1):
-                _str = o.__str__(o)
+                _str = o.__class__.__str__(o)
             else:
                 _str = o.__str__()
             if match := re.match("^<class '([\\w.]+)'>$", str(type(o))):
