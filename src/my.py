@@ -1,9 +1,10 @@
 from __future__ import annotations
+from collections import Counter
 from collections.abc import KeysView
 from datetime import datetime
 from itertools import islice
 from types import GeneratorType, FunctionType
-from typing import Iterable
+from typing import Iterable, TypeVar, Any
 import csv
 import io
 import inspect
@@ -13,6 +14,9 @@ import re
 import subprocess
 import sys
 import traceback
+
+
+T = TypeVar("T")
 
 
 def printed(var) -> str:
@@ -38,6 +42,10 @@ class Encoder(json.JSONEncoder):
 
         f = Encoder.__encode_dict
 
+        if o is None:
+            return "null"
+        if isinstance(o, (str, int, float, bool)):
+            return o
         if isinstance(o, list):
             return [f(e) for e in o]
         if isinstance(o, dict):
@@ -196,13 +204,8 @@ def sort_table(table: list, key_column: int = 0, reverse: bool = False) -> list:
     return table2
 
 
-def summarise(dic: dict) -> dict:
-    counts = {}
-    for key, value in dic.items():
-        if value not in counts:
-            counts[value] = 0
-        counts[value] += 1
-    return counts
+def summarise(dic: dict[Any, T]) -> dict[T, int]:
+    return {key: value for key, value in Counter(dic.values()).items()}
 
 
 class AbstractMethodException(Exception):
