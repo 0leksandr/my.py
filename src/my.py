@@ -61,7 +61,7 @@ class Encoder(json.JSONEncoder):
             #     'minute': '%M',
             #     'second': '%S',
             # }.items()})
-            return o.strftime("%Y-%m-%d %H:%M:%S")
+            return o.strftime("%Y-%m-%d %H:%M:%S%z")
         if isinstance(o, (GeneratorType, KeysView)):
             return f(list(o))
         if isinstance(o, Exception):
