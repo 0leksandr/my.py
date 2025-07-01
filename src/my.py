@@ -43,7 +43,7 @@ class Encoder(json.JSONEncoder):
         f = Encoder.__encode_dict
 
         if o is None:
-            return "null"
+            return None
         if isinstance(o, (str, int, float, bool)):
             return o
         if isinstance(o, list):
