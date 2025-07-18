@@ -49,7 +49,7 @@ class Encoder(json.JSONEncoder):
         if isinstance(o, list):
             return [f(e) for e in o]
         if isinstance(o, dict):
-            return {f(k): f(v) for k, v in o.items()}
+            return {json_encode(k): f(v) for k, v in o.items()}
         if isinstance(o, tuple):
             return tuple(f(e) for e in o)
         if isinstance(o, datetime):
@@ -92,7 +92,7 @@ class Encoder(json.JSONEncoder):
         return dic
 
 
-def json_encode_obj(var):
+def json_encode_obj(var) -> str:
     # return json.dumps(var, cls=Encoder, ensure_ascii=False)
     return json.dumps(Encoder.default_encode(var), ensure_ascii=False)
 
@@ -114,7 +114,7 @@ def json_decode(string: str):
     return json.loads(string, object_hook=json_decode_obj)
 
 
-def dumped_at(skip: int, *var):
+def dumped_at(skip: int, *var) -> str:
     frames = traceback.extract_stack()[:-skip]
     frame = frames[-1]
     filename = frame.filename
@@ -143,7 +143,7 @@ def dumped_at(skip: int, *var):
     return "\n".join(lines)
 
 
-def dump(*var):
+def dump(*var) -> None:
     print(dumped_at(2, *var))
     # print(*var)
 
@@ -153,7 +153,7 @@ def log(*var) -> None:
         file.write(dumped_at(2, *var))
 
 
-def err(*var):  # duplicated from `dump`
+def err(*var) -> None:  # duplicated from `dump`
     print(dumped_at(2, *var), file=sys.stderr)
 
 
