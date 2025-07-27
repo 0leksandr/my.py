@@ -66,6 +66,8 @@ class Encoder(json.JSONEncoder):
             return f(list(o))
         if isinstance(o, Exception):
             return traceback.format_exc()
+        if isinstance(o, type):
+            return f"<{o.__name__}>"
         if hasattr(o, '__str__') and callable(getattr(o, '__str__')):
             if (not isinstance(o.__str__, FunctionType)  # https://stackoverflow.com/a/8727121/12446338
                 and len(inspect.signature(o.__str__).parameters) == 1):
