@@ -116,10 +116,7 @@ def json_decode(string: str):
     return json.loads(string, object_hook=json_decode_obj)
 
 
-def dumped_at(skip: int, *var) -> str:
-    frames = traceback.extract_stack()[:-skip]
-    frame = frames[-1]
-    filename = frame.filename
+def trim_project_root(filename: str) -> str:
     dirname = os.path.dirname(filename)
     while not any([os.path.exists(f"{dirname}/{path}") for path in [".git", ".idea", ".venv"]]):
         if dirname in ("", "/"):
@@ -129,9 +126,16 @@ def dumped_at(skip: int, *var) -> str:
             dirname = os.path.dirname(dirname)
     if dirname is not None:
         dirname += "/"
-        if filename[:len(dirname)] == dirname:
-            filename = filename[len(dirname):]
-    prefix = f"{filename}:{frame.lineno}"
+        assert filename[:len(dirname)] == dirname
+        return filename[len(dirname):]
+    else:
+        return filename
+
+
+def dumped_at(skip: int, *var) -> str:
+    frames = traceback.extract_stack()[:-skip]
+    frame = frames[-1]
+    prefix = f"{trim_project_root(frame.filename)}:{frame.lineno}"
     prefix += " " * len(frames)
     out = prefix
     for v in var:
@@ -213,3 +217,18 @@ def summarise(dic: dict[Any, T]) -> dict[T, int]:
 class AbstractMethodException(Exception):
     def __init__(self) -> None:
         super().__init__("abstract method")
+
+
+def trace(print_code: bool=False, join: bool=True) -> list[str] | str:
+    # return [f"{trim_project_root(frame.filename)}:{frame.lineno}" for frame in inspect.stack()]
+
+    _trace: list[str] = []
+    stack = traceback.extract_stack()
+    stack.pop()
+    while len(stack) > 0:
+        frame = stack.pop()
+        _trace.append(f"{trim_project_root(frame.filename)}:{frame.lineno}{(" " + frame.line) if print_code else ""}")
+    if join:
+        return "\n".join(_trace)
+    else:
+        return _trace
