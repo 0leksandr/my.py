@@ -196,9 +196,13 @@ def csv_read_to_dict(filename: str) -> list[dict[str, str]]:
     return [{header[i]: row[i] for i in range(len(row))} for row in _list]
 
 
-def csv_write(filename: str, table: list[list[str]]) -> None:
+def csv_write(filename: str,
+              table: list[list[str]],
+              header: list[str] = None) -> None:
     with open(filename, 'w') as file:
         writer = csv.writer(file)
+        if header is not None:
+            writer.writerow(header)
         writer.writerows(table)
 
 
