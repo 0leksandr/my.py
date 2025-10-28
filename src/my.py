@@ -182,28 +182,37 @@ def chunks_list(lst: list, size: int) -> Iterable[list]:
 #
 
 
-def csv_read_to_list(filename: str) -> list[list[str]]:
+def csv_read_to_lists(filename: str) -> list[list[str]]:
     with open(filename, "r") as file:
         delimiter = csv.Sniffer().sniff(file.readlines(1)[0]).delimiter
         file.seek(0)
         return [row for row in csv.reader(file, delimiter=delimiter)]
 
 
-def csv_read_to_dict(filename: str) -> list[dict[str, str]]:
-    _list = csv_read_to_list(filename)
+def csv_read_to_dicts(filename: str) -> list[dict[str, str]]:
+    _list = csv_read_to_lists(filename)
     assert len(set(len(row) for row in _list)) == 1
     header = _list.pop(0)
     return [{header[i]: row[i] for i in range(len(row))} for row in _list]
 
 
-def csv_write(filename: str,
-              table: list[list[str]],
-              header: list[str] = None) -> None:
+def csv_write_lists(filename: str,
+                    table: list[list[str]],
+                    header: list[str] = None) -> None:
     with open(filename, 'w') as file:
         writer = csv.writer(file)
         if header is not None:
             writer.writerow(header)
         writer.writerows(table)
+
+
+def csv_write_dicts(filename: str, dicts: list[dict[str, Any]]) -> None:
+    assert len(dicts) > 0
+    header = list(dicts[0].keys())
+    assert all(all(h in d.keys() for h in header) for d in dicts)
+    csv_write_lists(filename,
+                    [[row[key] for key in header] for row in dicts],
+                    header)
 
 
 def sort_table(table: list, key_column: int = 0, reverse: bool = False) -> list:
