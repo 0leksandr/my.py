@@ -95,6 +95,8 @@ class Encoder(json.JSONEncoder):
 
 
 def json_encode_obj(var) -> str:
+    if isinstance(var, Literal):
+        return var.value
     # return json.dumps(var, cls=Encoder, ensure_ascii=False)
     return json.dumps(Encoder.default_encode(var), ensure_ascii=False)
 
@@ -149,9 +151,10 @@ def dumped_at(skip: int, *var) -> str:
     return "\n".join(lines)
 
 
+additional_dump: tuple = ()
+
 def dump(*var) -> None:
-    print(dumped_at(2, *var))
-    # print(*var)
+    print(dumped_at(2, *(tuple(v() for v in additional_dump) + var)))
 
 
 def log(*var) -> None:
@@ -245,3 +248,22 @@ def trace(print_code: bool=False, join: bool=True) -> list[str] | str:
         return "\n".join(_trace)
     else:
         return _trace
+
+
+class Literal:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+def set_start(start: datetime = None) -> None:
+    global additional_dump
+    if start is None:
+        start = datetime.now()
+    additional_dump += (lambda: Literal((datetime.now() - start).__str__()),)
+
+def set_dump_code() -> None:
+    global additional_dump
+    def get_code() -> Literal:
+        return Literal(re.sub("^ *dump\\((.*)\\)$",
+                              "\\1 =",
+                              traceback.extract_stack()[-4].line).__str__())
+    additional_dump += (get_code,)
