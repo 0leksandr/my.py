@@ -135,12 +135,12 @@ def trim_project_root(filename: str) -> str:
 
 
 def dumped_at(skip: int, *var) -> str:
-    frames = traceback.extract_stack()[:-skip]
+    frames = traceback.extract_stack()[:-skip - 2]
     frame = frames[-1]
     prefix = f"{trim_project_root(frame.filename)}:{frame.lineno}"
     prefix += " " * len(frames)
     out = prefix
-    for v in var:
+    for v in tuple(v() for v in additional_dump) + var:
         out += " " + json_encode(v)
     lines = out.split("\n")
     if lines[-1] == "\"":
@@ -154,16 +154,16 @@ def dumped_at(skip: int, *var) -> str:
 additional_dump: tuple = ()
 
 def dump(*var) -> None:
-    print(dumped_at(2, *(tuple(v() for v in additional_dump) + var)))
+    print(dumped_at(0, *var))
 
 
 def log(*var) -> None:
     with open("log.txt", "a") as file:
-        file.write(dumped_at(2, *var))
+        file.write(dumped_at(0, *var))
 
 
 def err(*var) -> None:  # duplicated from `dump`
-    print(dumped_at(2, *var), file=sys.stderr)
+    print(dumped_at(0, *var), file=sys.stderr)
 
 
 def call(command: str) -> list[str]:
@@ -263,7 +263,7 @@ def set_start(start: datetime = None) -> None:
 def set_dump_code() -> None:
     global additional_dump
     def get_code() -> Literal:
-        return Literal(re.sub("^ *dump\\((.*)\\)$",
+        return Literal(re.sub(f"^ *{dumped_at.__name__}\\((.*)\\)$",
                               "\\1 =",
-                              traceback.extract_stack()[-4].line).__str__())
+                              traceback.extract_stack()[-3].line or "").__str__())
     additional_dump += (get_code,)
