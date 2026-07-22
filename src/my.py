@@ -265,5 +265,5 @@ def set_dump_code() -> None:
     def get_code() -> Literal:
         return Literal(re.sub(f"^ *{dumped_at.__name__}\\((.*)\\)$",
                               "\\1 =",
-                              traceback.extract_stack()[-5].line or "").__str__())
+                              traceback.extract_stack()[-4].line or "").__str__())
     additional_dump += (get_code,)
