@@ -6,6 +6,7 @@ from itertools import islice
 from types import GeneratorType, FunctionType
 from typing import Iterable, TypeVar, Any
 import csv
+import functools
 import io
 import inspect
 import json
@@ -49,7 +50,7 @@ class Encoder(json.JSONEncoder):
         if isinstance(o, list):
             return [f(e) for e in o]
         if isinstance(o, dict):
-            return {json_encode(k): f(v) for k, v in o.items()}
+            return {f(k): f(v) for k, v in o.items()}
         if isinstance(o, tuple):
             return tuple(f(e) for e in o)
         if isinstance(o, datetime):
@@ -94,15 +95,16 @@ class Encoder(json.JSONEncoder):
         return dic
 
 
-def json_encode_obj(var) -> str:
+def json_encode_obj(var, **kwargs) -> str:
     if isinstance(var, Literal):
         return var.value
     # return json.dumps(var, cls=Encoder, ensure_ascii=False)
-    return json.dumps(Encoder.default_encode(var), ensure_ascii=False)
+    return json.dumps(Encoder.default_encode(var), ensure_ascii=False, **kwargs)
 
 
-def json_encode(var) -> str:
-    return str(json_encode_obj(var)).replace("\\n", "\n")
+@functools.wraps(json.dumps)
+def json_encode(var, **kwargs) -> str:
+    return str(json_encode_obj(var, **kwargs)).replace("\\n", "\n")
 
 
 def json_decode_obj(o):
@@ -114,8 +116,10 @@ def json_decode_obj(o):
     return o
 
 
-def json_decode(string: str):
-    return json.loads(string, object_hook=json_decode_obj)
+@functools.wraps(json.loads)
+# @functools.wraps(json.JSONDecoder.__init__)
+def json_decode(string: str, **kwargs) -> Any:
+    return json.loads(string, object_hook=json_decode_obj, **kwargs)
 
 
 def trim_project_root(filename: str) -> str:
@@ -141,7 +145,7 @@ def dumped_at(skip: int, *var) -> str:
     prefix += " " * len(frames)
     out = prefix
     for v in tuple(v() for v in additional_dump) + var:
-        out += " " + json_encode(v)
+        out += " " + json_encode(v, indent=4)
     lines = out.split("\n")
     if lines[-1] == "\"":
         lines[-2] += "\""
