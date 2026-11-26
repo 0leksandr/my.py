@@ -1,4 +1,4 @@
-packaging==26.2
-setuptools==83.0.0
+packaging==26.4
+setuptools==84.2.1
 versioneer==0.29
-wheel==0.47.0
+wheel==0.48.0
